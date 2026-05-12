@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { fetchSymbolSearch, getAlphaVantageApiKey } from "@/lib/api/alpha-vantage";
-
+import { fetchSymbolSearch } from "@/lib/api/alpha-vantage";
 export const dynamic = "force-dynamic";
 
 /**
@@ -13,7 +12,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ matches: [] });
   }
 
-  if (!getAlphaVantageApiKey()) {
+  if (!process.env.NEXT_PUBLIC_ALPHA_VANTAGE_KEY?.trim()) {
     return NextResponse.json({ matches: [], noApiKey: true });
   }
 

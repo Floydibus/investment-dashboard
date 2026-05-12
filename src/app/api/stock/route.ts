@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAlphaVantageApiKey } from "@/lib/api/alpha-vantage";
 import { fetchStockData } from "@/lib/api/fetch-stock-data";
-
 export const dynamic = "force-dynamic";
 
 const FRIENDLY =
@@ -9,7 +7,7 @@ const FRIENDLY =
 
 /**
  * Universelle Marktdaten für einen Ticker (Quote + Daily + Overview).
- * Key: `NEXT_PUBLIC_ALPHA_VANTAGE_KEY` oder `ALPHA_VANTAGE_API_KEY` (nur Server-Aufrufe).
+ * Key: ausschließlich `process.env.NEXT_PUBLIC_ALPHA_VANTAGE_KEY` (Server-Aufrufe).
  */
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -21,7 +19,7 @@ export async function GET(req: Request) {
     );
   }
 
-  if (!getAlphaVantageApiKey()) {
+  if (!process.env.NEXT_PUBLIC_ALPHA_VANTAGE_KEY?.trim()) {
     return NextResponse.json(
       { ok: false, error: "NO_KEY", message: FRIENDLY },
       { status: 503 },

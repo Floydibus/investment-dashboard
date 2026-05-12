@@ -26,7 +26,7 @@ async function safeOverview(sym: string): Promise<CompanyOverview | null> {
 
 /**
  * Live-Marktdaten: GLOBAL_QUOTE + TIME_SERIES_DAILY + OVERVIEW (Sektor, Text, Ziel).
- * Key: `NEXT_PUBLIC_ALPHA_VANTAGE_KEY` oder `ALPHA_VANTAGE_API_KEY` (siehe alpha-vantage.ts).
+ * Key: `process.env.NEXT_PUBLIC_ALPHA_VANTAGE_KEY` (siehe alpha-vantage.ts).
  */
 export async function fetchStockData(ticker: string): Promise<StockDataBundle> {
   const sym = ticker.trim().toUpperCase();

@@ -1,20 +1,16 @@
 /**
  * Alpha Vantage — Live-Kurse (GLOBAL_QUOTE), Tages-Serie, OVERVIEW, SYMBOL_SEARCH.
  *
- * API-Key (Reihenfolge):
- * 1. `NEXT_PUBLIC_ALPHA_VANTAGE_KEY` — wie im Projekt vorgegeben (Hinweis: wird ins Client-Bundle eingebettet).
- * 2. `ALPHA_VANTAGE_API_KEY` — nur Server, empfohlen für Produktion.
+ * API-Key: ausschließlich `process.env.NEXT_PUBLIC_ALPHA_VANTAGE_KEY` (in `.env.local`).
  *
  * @see https://www.alphavantage.co/documentation/
  */
 
 const ALPHA_BASE = "https://www.alphavantage.co/query";
 
-/** Liest den konfigurierten Alpha-Vantage-Key (öffentlich oder server-only). */
+/** Einziger Key-Pfad für Alpha Vantage (Next.js: NEXT_PUBLIC_*). */
 export function getAlphaVantageApiKey(): string | null {
-  const k =
-    process.env.NEXT_PUBLIC_ALPHA_VANTAGE_KEY?.trim() ||
-    process.env.ALPHA_VANTAGE_API_KEY?.trim();
+  const k = process.env.NEXT_PUBLIC_ALPHA_VANTAGE_KEY?.trim();
   return k || null;
 }
 
@@ -52,7 +48,7 @@ function getApiKey(): string {
   const key = getAlphaVantageApiKey();
   if (!key) {
     throw new Error(
-      "Alpha Vantage Key fehlt. Setzen Sie NEXT_PUBLIC_ALPHA_VANTAGE_KEY oder ALPHA_VANTAGE_API_KEY in .env.local.",
+      "Alpha Vantage Key fehlt. Setzen Sie NEXT_PUBLIC_ALPHA_VANTAGE_KEY in .env.local.",
     );
   }
   return key;

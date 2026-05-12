@@ -77,10 +77,6 @@ export function TickerDashboard({ model }: TickerDashboardProps) {
         <code className="rounded bg-slate-900 px-1.5 py-0.5 font-mono text-xs">
           NEXT_PUBLIC_ALPHA_VANTAGE_KEY
         </code>{" "}
-        oder{" "}
-        <code className="rounded bg-slate-900 px-1.5 py-0.5 font-mono text-xs">
-          ALPHA_VANTAGE_API_KEY
-        </code>{" "}
         in <code className="font-mono text-xs">.env.local</code>.
       </p>
     ) : model.marketDataState === "unavailable" ? (

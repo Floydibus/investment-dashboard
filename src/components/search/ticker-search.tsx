@@ -54,6 +54,7 @@ export function TickerSearch({
   const [activeIndex, setActiveIndex] = useState(0);
   const [remote, setRemote] = useState<TickerSearchMatch[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searchNotice, setSearchNotice] = useState<string | null>(null);
 
   const suggestions: Row[] = useMemo(() => {
     const raw = query.trim();
@@ -91,6 +92,7 @@ export function TickerSearch({
     if (q.length < 1) {
       setRemote([]);
       setLoading(false);
+      setSearchNotice(null);
       return;
     }
 
@@ -100,6 +102,7 @@ export function TickerSearch({
     const ac = new AbortController();
     const t = window.setTimeout(async () => {
       setLoading(true);
+      setSearchNotice(null);
       try {
         if (isSym) {
           const res = await fetch(
@@ -108,6 +111,7 @@ export function TickerSearch({
           );
           const data = (await res.json()) as {
             ok?: boolean;
+            message?: string;
             quote?: { symbol?: string };
             overview?: {
               name?: string | null;
@@ -126,21 +130,40 @@ export function TickerSearch({
                 type: data.overview?.industry?.trim() || "",
               },
             ]);
+            setSearchNotice(null);
           } else {
             setRemote([]);
+            setSearchNotice(
+              typeof data.message === "string" && data.message.trim()
+                ? data.message.trim()
+                : "Marktdaten werden geladen... bitte kurz warten.",
+            );
           }
         } else {
           const res = await fetch(
             `/api/search/tickers?q=${encodeURIComponent(q)}`,
             { signal: ac.signal },
           );
-          const data = (await res.json()) as { matches?: TickerSearchMatch[] };
+          const data = (await res.json()) as {
+            matches?: TickerSearchMatch[];
+            noApiKey?: boolean;
+          };
           if (!ac.signal.aborted) {
             setRemote(Array.isArray(data.matches) ? data.matches : []);
+            if (data.noApiKey) {
+              setSearchNotice(
+                "NEXT_PUBLIC_ALPHA_VANTAGE_KEY in .env.local setzen, um die Suche zu aktivieren.",
+              );
+            } else {
+              setSearchNotice(null);
+            }
           }
         }
       } catch {
-        if (!ac.signal.aborted) setRemote([]);
+        if (!ac.signal.aborted) {
+          setRemote([]);
+          setSearchNotice("Marktdaten werden geladen... bitte kurz warten.");
+        }
       } finally {
         if (!ac.signal.aborted) setLoading(false);
       }
@@ -204,7 +227,10 @@ export function TickerSearch({
 
   const showList =
     open &&
-    (suggestions.length > 0 || loading || normalizeTicker(query).length > 0);
+    (suggestions.length > 0 ||
+      loading ||
+      searchNotice != null ||
+      normalizeTicker(query).length > 0);
 
   return (
     <div
@@ -265,6 +291,11 @@ export function TickerSearch({
           role="listbox"
           className="absolute z-50 mt-2 max-h-72 w-full overflow-auto rounded-xl border border-border bg-card py-1 shadow-xl"
         >
+          {searchNotice ? (
+            <li className="border-b border-border/60 px-4 py-2 text-xs text-amber-700 dark:text-amber-400">
+              {searchNotice}
+            </li>
+          ) : null}
           {loading && suggestions.length === 0 ? (
             <li className="flex items-center gap-2 px-4 py-3 text-sm text-muted-foreground">
               <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
