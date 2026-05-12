@@ -9,12 +9,12 @@ import {
   fetchQuoteSnapshot,
 } from "@/lib/api/alpha-vantage";
 
-/** Free-Tier: kurze Pause zwischen Requests reduziert „Note/Information“-Limit-Antworten. */
-const BETWEEN_AV_CALLS_MS = 900;
-/** Nach GLOBAL_QUOTE etwas länger warten, bevor TIME_SERIES_DAILY folgt. */
-const AFTER_QUOTE_BEFORE_DAILY_MS = 1200;
-/** Einmaliges Retry nach Limit-Fehler bei der Tages-Serie. */
-const DAILY_RETRY_BACKOFF_MS = 2800;
+/** Nach GLOBAL_QUOTE kurz warten, bevor weitere Alpha-Vantage-Calls starten. */
+const AFTER_QUOTE_MS = 800;
+/** Daily zuerst starten, Overview leicht versetzt — weniger gleichzeitige Treffer, kürzere SSR-Zeit als rein sequenziell. */
+const BEFORE_OVERVIEW_STAGGER_MS = 350;
+/** Einmaliges Retry nach Limit-Fehler bei der Tages-Serie (Hobby: SSR ~10s Budget). */
+const DAILY_RETRY_BACKOFF_MS = 1800;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -51,29 +51,32 @@ async function safeOverview(sym: string): Promise<CompanyOverview | null> {
 }
 
 /**
- * Live-Marktdaten: nacheinander (GLOBAL_QUOTE → Daily → Overview), damit das
- * Alpha-Vantage-Free-Tier nicht durch parallele Requests sofort mit „Note/Information“ aussteigt.
+ * Live-Marktdaten: GLOBAL_QUOTE zuerst, danach Daily + Overview mit kleinem Offset parallel,
+ * damit SSR auf Vercel (u. a. ~10s Hobby-Limit) zuverlässiger fertig wird und das Free-Tier
+ * weniger stark trifft als drei strikt sequenzielle Calls mit langen Pausen.
  * Daily/Overview dürfen ausfallen — der Kurs aus GLOBAL_QUOTE bleibt nutzbar.
  */
 export async function fetchStockData(ticker: string): Promise<StockDataBundle> {
   const sym = ticker.trim().toUpperCase();
   const quote = await fetchQuoteSnapshot(sym);
 
-  await sleep(AFTER_QUOTE_BEFORE_DAILY_MS);
+  await sleep(AFTER_QUOTE_MS);
 
-  let dailyCloses: DailyClosePoint[] = [];
-  try {
-    dailyCloses = await fetchDailyClosesWithRetry(sym, 14);
-  } catch (e) {
-    dailyCloses = [];
-    if (process.env.NODE_ENV === "development") {
-      console.warn("[fetchStockData] TIME_SERIES_DAILY failed after retry:", sym, e);
+  const dailyPromise = (async (): Promise<DailyClosePoint[]> => {
+    try {
+      return await fetchDailyClosesWithRetry(sym, 14);
+    } catch (e) {
+      if (process.env.NODE_ENV === "development") {
+        console.warn("[fetchStockData] TIME_SERIES_DAILY failed after retry:", sym, e);
+      }
+      return [];
     }
-  }
+  })();
 
-  await sleep(BETWEEN_AV_CALLS_MS);
+  await sleep(BEFORE_OVERVIEW_STAGGER_MS);
+  const overviewPromise = safeOverview(sym);
 
-  const overview = await safeOverview(sym);
+  const [dailyCloses, overview] = await Promise.all([dailyPromise, overviewPromise]);
   return { quote, dailyCloses, overview };
 }
 

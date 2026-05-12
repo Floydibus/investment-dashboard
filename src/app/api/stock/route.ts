@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAlphaVantageApiKey } from "@/lib/api/alpha-vantage";
 import { fetchStockData } from "@/lib/api/fetch-stock-data";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 const FRIENDLY =
   "Marktdaten werden geladen... bitte kurz warten.";
