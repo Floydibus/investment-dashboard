@@ -4,7 +4,6 @@ import {
   type CompanyOverview,
   type QuoteSnapshot,
 } from "@/lib/api/alpha-vantage";
-import { fetchStockData } from "@/lib/api/fetch-stock-data";
 import {
   buildSmartAnalysis,
   buildStrategicFromTemplates,
@@ -279,6 +278,7 @@ export async function getDashboardViewModel(
   }
 
   try {
+    const { fetchStockData } = await import("@/lib/api/fetch-stock-data");
     const { quote: snap, dailyCloses, overview } = await fetchStockData(avSym);
     const spark: DashboardSparkPoint[] = dailyCloses.map((p) => ({
       date: p.date,

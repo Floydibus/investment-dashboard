@@ -11,12 +11,15 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: false, error: "MISSING_TICKER", dailyCloses: [] }, { status: 400 });
   }
   if (!getAlphaVantageApiKey()) {
+    console.error("[stock/daily] NO_KEY");
     return NextResponse.json({ ok: false, error: "NO_KEY", dailyCloses: [] }, { status: 503 });
   }
   try {
     const dailyCloses = await fetchDailyCloses(ticker, 14);
     return NextResponse.json({ ok: true, dailyCloses });
-  } catch {
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("[stock/daily]", ticker, msg);
     return NextResponse.json({ ok: true, dailyCloses: [] as { date: string; close: number }[] });
   }
 }

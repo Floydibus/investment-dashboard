@@ -11,12 +11,15 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: false, overview: null }, { status: 400 });
   }
   if (!getAlphaVantageApiKey()) {
+    console.error("[stock/overview] NO_KEY");
     return NextResponse.json({ ok: false, overview: null }, { status: 503 });
   }
   try {
     const overview = await fetchCompanyOverview(ticker);
     return NextResponse.json({ ok: true, overview });
-  } catch {
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("[stock/overview]", ticker, msg);
     return NextResponse.json({ ok: true, overview: null });
   }
 }

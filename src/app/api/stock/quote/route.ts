@@ -16,6 +16,7 @@ export async function GET(req: Request) {
     );
   }
   if (!getAlphaVantageApiKey()) {
+    console.error("[stock/quote] NO_KEY (Umgebungsvariable fehlt auf diesem Deployment)");
     return NextResponse.json(
       { ok: false, error: "NO_KEY", message: FRIENDLY },
       { status: 503 },
@@ -26,6 +27,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: true, quote });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
+    console.error("[stock/quote]", ticker, msg);
     const rateLimited =
       /limit|Note|Information|Warteschlange|429/i.test(msg) ||
       msg.includes("call frequency");
@@ -34,7 +36,7 @@ export async function GET(req: Request) {
         ok: false,
         error: rateLimited ? "RATE_LIMIT" : "FETCH_FAILED",
         message: FRIENDLY,
-        detail: process.env.NODE_ENV === "development" ? msg : undefined,
+        detail: msg.length > 280 ? `${msg.slice(0, 280)}…` : msg,
       },
       { status: rateLimited ? 429 : 502 },
     );

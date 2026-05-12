@@ -37,11 +37,13 @@ export function DashboardLiveGate({ displayTicker, avSym }: Props) {
         );
         const qJson = (await qRes.json()) as {
           ok?: boolean;
+          error?: string;
           quote?: QuoteSnapshot;
         };
         if (cancelled) return;
         if (!qJson.ok || !qJson.quote) {
-          setModel(getDashboardShellFor(displayTicker, avSym, "unavailable"));
+          const state = qJson.error === "NO_KEY" ? "no_api_key" : "unavailable";
+          setModel(getDashboardShellFor(displayTicker, avSym, state));
           return;
         }
         const quote = qJson.quote;
