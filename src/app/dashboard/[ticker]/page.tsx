@@ -22,5 +22,11 @@ export default async function DashboardPage({ params }: PageProps) {
   }
 
   const { displayTicker, avSym } = getDashboardTickerParams(decoded);
-  return <DashboardLiveGate displayTicker={displayTicker} avSym={avSym} />;
+  return (
+    <DashboardLiveGate
+      key={`${displayTicker}-${avSym}`}
+      displayTicker={displayTicker}
+      avSym={avSym}
+    />
+  );
 }

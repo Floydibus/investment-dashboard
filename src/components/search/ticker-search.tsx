@@ -30,6 +30,11 @@ function isValidTickerSymbol(s: string): boolean {
   return /^[A-Z0-9][A-Z0-9.\-]{0,23}$/.test(s);
 }
 
+/** Mindestens 3 Zeichen: verhindert Quote-Spam pro Tastendruck (Alpha-Vantage-Limit). */
+function isLikelyFullSymbolForQuote(s: string): boolean {
+  return s.length >= 3 && isValidTickerSymbol(s);
+}
+
 export type TickerSearchProps = {
   className?: string;
   /** Ziel nach Auswahl — Standard: `/dashboard/{symbol}` */
@@ -59,7 +64,7 @@ export function TickerSearch({
   const suggestions: Row[] = useMemo(() => {
     const raw = query.trim();
     const q = normalizeTicker(raw);
-    const isSym = q.length > 0 && isValidTickerSymbol(q);
+    const isSym = q.length > 0 && isLikelyFullSymbolForQuote(q);
 
     if (loading && isSym) {
       return [];
@@ -97,7 +102,7 @@ export function TickerSearch({
     }
 
     const normalized = normalizeTicker(q);
-    const isSym = normalized.length > 0 && isValidTickerSymbol(normalized);
+    const isSym = normalized.length > 0 && isLikelyFullSymbolForQuote(normalized);
     /** Voller Stock-Fetch (3 AV-Calls) — etwas länger entprellen als Namenssuche. */
     const debounceMs = isSym ? 700 : 320;
 
