@@ -180,14 +180,18 @@ export async function fetchDailyCloses(
 
   const dates = Object.keys(series).sort();
   const tail = dates.slice(-points);
-  return tail.map((date) => {
+  const out: DailyClosePoint[] = [];
+  for (const date of tail) {
     const row = series[date];
     const c = num(row?.["4. close"]);
-    return {
-      date,
-      close: c ?? 0,
-    };
-  });
+    if (c != null && c > 0) {
+      out.push({ date, close: c });
+    }
+  }
+  if (out.length === 0 && tail.length > 0) {
+    throw new Error("Alpha Vantage: Tages-Serie ohne gültige Schlusskurse");
+  }
+  return out;
 }
 
 function parseMarketCapBln(raw: string | undefined): number | null {

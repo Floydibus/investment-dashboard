@@ -11,9 +11,28 @@ import {
 
 /** Free-Tier: kurze Pause zwischen Requests reduziert „Note/Information“-Limit-Antworten. */
 const BETWEEN_AV_CALLS_MS = 900;
+/** Nach GLOBAL_QUOTE etwas länger warten, bevor TIME_SERIES_DAILY folgt. */
+const AFTER_QUOTE_BEFORE_DAILY_MS = 1200;
+/** Einmaliges Retry nach Limit-Fehler bei der Tages-Serie. */
+const DAILY_RETRY_BACKOFF_MS = 2800;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchDailyClosesWithRetry(
+  sym: string,
+  points: number,
+): Promise<DailyClosePoint[]> {
+  try {
+    return await fetchDailyCloses(sym, points);
+  } catch (e) {
+    if (process.env.NODE_ENV === "development") {
+      console.warn("[fetchStockData] TIME_SERIES_DAILY first try failed:", sym, e);
+    }
+    await sleep(DAILY_RETRY_BACKOFF_MS);
+    return await fetchDailyCloses(sym, points);
+  }
 }
 
 export type StockDataBundle = {
@@ -40,13 +59,16 @@ export async function fetchStockData(ticker: string): Promise<StockDataBundle> {
   const sym = ticker.trim().toUpperCase();
   const quote = await fetchQuoteSnapshot(sym);
 
-  await sleep(BETWEEN_AV_CALLS_MS);
+  await sleep(AFTER_QUOTE_BEFORE_DAILY_MS);
 
   let dailyCloses: DailyClosePoint[] = [];
   try {
-    dailyCloses = await fetchDailyCloses(sym, 14);
-  } catch {
+    dailyCloses = await fetchDailyClosesWithRetry(sym, 14);
+  } catch (e) {
     dailyCloses = [];
+    if (process.env.NODE_ENV === "development") {
+      console.warn("[fetchStockData] TIME_SERIES_DAILY failed after retry:", sym, e);
+    }
   }
 
   await sleep(BETWEEN_AV_CALLS_MS);

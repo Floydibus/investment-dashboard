@@ -131,9 +131,14 @@ export function TickerDashboard({ model }: TickerDashboardProps) {
               </p>
             )}
           </div>
-          <div className="flex h-14 min-w-0 flex-1 items-center gap-2 sm:max-w-xs">
-            <span className="sr-only">Kursverlauf (14 Tage)</span>
-            <QuoteSparkline data={model.sparkline} positive={positive} live={live} />
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-1 sm:max-w-xs">
+            <span className="sr-only">Kursverlauf (14 Handelstage)</span>
+            <div className="flex h-14 min-h-0 w-full items-center">
+              <QuoteSparkline data={model.sparkline} positive={positive} live={live} />
+            </div>
+            {live && model.sparklineHint ? (
+              <p className="text-[10px] leading-snug text-slate-500">{model.sparklineHint}</p>
+            ) : null}
           </div>
         </div>
         <div className="shrink-0 text-left sm:text-right">

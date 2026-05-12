@@ -84,6 +84,8 @@ export type DashboardViewModel = {
     contracts: string;
   };
   aiSummary: DashboardAISummary;
+  /** Kurzer Hinweis unter der Sparkline (z. B. Fallback-Kurve). */
+  sparklineHint: string | null;
 };
 
 function resolveAlphaVantageSymbol(tickerRaw: string): string {
@@ -143,6 +145,7 @@ function buildShellModel(
     news: [],
     strategic,
     aiSummary: aiSummary as DashboardAISummary,
+    sparklineHint: null,
   };
 }
 
@@ -169,7 +172,23 @@ function mergeFromLive(
       ? Math.round((snap.volume / 1e6) * 100) / 100
       : null;
 
-  const spark = daily.filter((p) => p.close > 0);
+  let spark = daily.filter((p) => p.close > 0);
+  let sparklineHint: string | null = null;
+
+  if (spark.length < 2 && snap.previousClose > 0 && snap.lastClose > 0) {
+    const asOf = snap.asOf;
+    const d = new Date(`${asOf}T12:00:00Z`);
+    d.setUTCDate(d.getUTCDate() - 1);
+    const approxPrevDay = d.toISOString().slice(0, 10);
+    spark = [
+      { date: approxPrevDay, close: snap.previousClose },
+      { date: asOf, close: snap.lastClose },
+    ];
+    sparklineHint =
+      "Kurzübersicht Vortag → aktueller Stand (14-Tage-Serie derzeit nicht verfügbar oder limitiert).";
+  } else if (spark.length < 2) {
+    spark = [];
+  }
 
   const keyStats: DashboardKeyStat[] = [];
   if (overview?.industry) {
@@ -201,7 +220,7 @@ function mergeFromLive(
       volumeMln: volMln,
       marketCapBln: overview?.marketCapBln ?? null,
     },
-    sparkline: spark.length >= 2 ? spark : [],
+    sparkline: spark,
     analystConsensusUsd: overview?.analystTargetPrice ?? null,
     analystConsensusHighUsd: null,
     fairValueUsd: null,
@@ -211,6 +230,7 @@ function mergeFromLive(
     news: [],
     strategic,
     aiSummary: aiSummary as DashboardAISummary,
+    sparklineHint,
   };
 }
 
