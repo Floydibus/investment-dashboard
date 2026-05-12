@@ -236,7 +236,10 @@ export async function getDashboardViewModel(
       close: p.close,
     }));
     return mergeFromLive(displayTicker, avSym, snap, spark, overview);
-  } catch {
+  } catch (e) {
+    if (process.env.NODE_ENV === "development") {
+      console.error("[getDashboardViewModel] Alpha Vantage:", avSym, e);
+    }
     return buildShellModel(displayTicker, avSym, "unavailable");
   }
 }

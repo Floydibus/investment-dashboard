@@ -1,8 +1,9 @@
 import { TickerDashboard } from "@/components/dashboard/ticker-dashboard";
 import { getDashboardViewModel } from "@/lib/data/dashboard-view-model";
 
-type PageProps = {
-  params: Promise<{ ticker: string }>;
+export const dynamic = "force-dynamic";
+
+type PageProps = {  params: Promise<{ ticker: string }>;
 };
 
 export default async function DashboardPage({ params }: PageProps) {

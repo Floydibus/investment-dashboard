@@ -75,7 +75,7 @@ export async function fetchQuoteSnapshot(symbol: string): Promise<QuoteSnapshot>
   const sym = symbol.trim().toUpperCase();
   const url = `${ALPHA_BASE}?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(sym)}&apikey=${key}`;
 
-  const res = await fetch(url, { next: { revalidate: 60 } });
+  const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) {
     throw new Error(`Alpha Vantage HTTP ${res.status}`);
   }
@@ -147,7 +147,7 @@ export async function fetchDailyCloses(
   const sym = symbol.trim().toUpperCase();
   const url = `${ALPHA_BASE}?function=TIME_SERIES_DAILY&symbol=${encodeURIComponent(sym)}&outputsize=compact&apikey=${key}`;
 
-  const res = await fetch(url, { next: { revalidate: 300 } });
+  const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) {
     throw new Error(`Alpha Vantage HTTP ${res.status}`);
   }
@@ -202,7 +202,7 @@ export async function fetchCompanyOverview(symbol: string): Promise<CompanyOverv
   const sym = symbol.trim().toUpperCase();
   const url = `${ALPHA_BASE}?function=OVERVIEW&symbol=${encodeURIComponent(sym)}&apikey=${key}`;
 
-  const res = await fetch(url, { next: { revalidate: 3600 } });
+  const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) {
     throw new Error(`Alpha Vantage OVERVIEW HTTP ${res.status}`);
   }
@@ -262,7 +262,7 @@ export async function fetchSymbolSearch(keywords: string): Promise<SymbolSearchM
   if (!kw) return [];
 
   const url = `${ALPHA_BASE}?function=SYMBOL_SEARCH&keywords=${encodeURIComponent(kw)}&apikey=${key}`;
-  const res = await fetch(url, { next: { revalidate: 120 } });
+  const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) {
     throw new Error(`Alpha Vantage SYMBOL_SEARCH HTTP ${res.status}`);
   }

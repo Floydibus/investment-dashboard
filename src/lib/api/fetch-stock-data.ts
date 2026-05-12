@@ -9,6 +9,13 @@ import {
   fetchQuoteSnapshot,
 } from "@/lib/api/alpha-vantage";
 
+/** Free-Tier: kurze Pause zwischen Requests reduziert „Note/Information“-Limit-Antworten. */
+const BETWEEN_AV_CALLS_MS = 900;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export type StockDataBundle = {
   quote: QuoteSnapshot;
   dailyCloses: DailyClosePoint[];
@@ -25,16 +32,26 @@ async function safeOverview(sym: string): Promise<CompanyOverview | null> {
 }
 
 /**
- * Live-Marktdaten: GLOBAL_QUOTE + TIME_SERIES_DAILY + OVERVIEW (Sektor, Text, Ziel).
- * Key: `process.env.NEXT_PUBLIC_ALPHA_VANTAGE_KEY` (siehe alpha-vantage.ts).
+ * Live-Marktdaten: nacheinander (GLOBAL_QUOTE → Daily → Overview), damit das
+ * Alpha-Vantage-Free-Tier nicht durch parallele Requests sofort mit „Note/Information“ aussteigt.
+ * Daily/Overview dürfen ausfallen — der Kurs aus GLOBAL_QUOTE bleibt nutzbar.
  */
 export async function fetchStockData(ticker: string): Promise<StockDataBundle> {
   const sym = ticker.trim().toUpperCase();
-  const [quote, dailyCloses, overview] = await Promise.all([
-    fetchQuoteSnapshot(sym),
-    fetchDailyCloses(sym, 14),
-    safeOverview(sym),
-  ]);
+  const quote = await fetchQuoteSnapshot(sym);
+
+  await sleep(BETWEEN_AV_CALLS_MS);
+
+  let dailyCloses: DailyClosePoint[] = [];
+  try {
+    dailyCloses = await fetchDailyCloses(sym, 14);
+  } catch {
+    dailyCloses = [];
+  }
+
+  await sleep(BETWEEN_AV_CALLS_MS);
+
+  const overview = await safeOverview(sym);
   return { quote, dailyCloses, overview };
 }
 
