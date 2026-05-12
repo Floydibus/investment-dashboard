@@ -8,7 +8,7 @@ type PageProps = {
 export default async function DashboardPage({ params }: PageProps) {
   const { ticker } = await params;
   const decoded = decodeURIComponent(ticker);
-  const model = getDashboardViewModel(decoded);
+  const model = await getDashboardViewModel(decoded);
 
   return <TickerDashboard model={model} />;
 }

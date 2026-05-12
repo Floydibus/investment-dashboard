@@ -6,19 +6,12 @@ function normalize(s: string) {
 }
 
 /**
- * Filtert das statische Katalog-Array — später austauschbar gegen API / Edge.
+ * Legacy-Helfer — leer; Autocomplete läuft über Alpha Vantage (siehe TickerSearch).
  */
 export function getTickerSuggestions(query: string, limit = 8): TickerSuggestion[] {
-  const q = normalize(query);
-  if (!q) {
-    return TICKER_CATALOG.slice(0, limit);
-  }
-  return TICKER_CATALOG.filter(
-    (t) =>
-      t.symbol.includes(q) ||
-      t.name.toUpperCase().includes(q) ||
-      (t.exchange?.toUpperCase().includes(q) ?? false),
-  ).slice(0, limit);
+  void query;
+  void limit;
+  return [];
 }
 
 export function findExactTicker(symbol: string): TickerSuggestion | undefined {
