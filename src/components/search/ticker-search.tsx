@@ -12,6 +12,7 @@ import {
 import { ArrowRight, LineChart, Loader2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useLocale } from "@/contexts/locale-context";
 import { cn } from "@/lib/utils";
 
 export type TickerSearchMatch = {
@@ -28,11 +29,6 @@ function normalizeTicker(raw: string): string {
 /** US + internationale Notation (z. B. ROG.SW, BRK-B). */
 function isValidTickerSymbol(s: string): boolean {
   return /^[A-Z0-9][A-Z0-9.\-]{0,23}$/.test(s);
-}
-
-/** Mindestens 3 Zeichen: verhindert Quote-Spam pro Tastendruck (Alpha-Vantage-Limit). */
-function isLikelyFullSymbolForQuote(s: string): boolean {
-  return s.length >= 3 && isValidTickerSymbol(s);
 }
 
 export type TickerSearchProps = {
@@ -52,6 +48,7 @@ export function TickerSearch({
   dashboardHref = (symbol) => `/dashboard/${encodeURIComponent(symbol)}`,
 }: TickerSearchProps) {
   const router = useRouter();
+  const { t } = useLocale();
   const listId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
@@ -62,35 +59,13 @@ export function TickerSearch({
   const [searchNotice, setSearchNotice] = useState<string | null>(null);
 
   const suggestions: Row[] = useMemo(() => {
-    const raw = query.trim();
-    const q = normalizeTicker(raw);
-    const isSym = q.length > 0 && isLikelyFullSymbolForQuote(q);
-
-    if (loading && isSym) {
-      return [];
-    }
-
     const fromApi: Row[] = remote.map((m) => ({
       symbol: m.symbol,
       name: m.name,
       exchange: [m.region, m.type].filter(Boolean).join(" · ") || undefined,
     }));
-
-    if (isSym) {
-      if (fromApi.length > 0) {
-        return fromApi.slice(0, 16);
-      }
-      return [
-        {
-          symbol: q,
-          name: "Direkt zum Dashboard",
-          exchange: "Live-Kurs prüfen",
-        },
-      ];
-    }
-
     return fromApi.slice(0, 16);
-  }, [query, remote, loading]);
+  }, [remote]);
 
   useEffect(() => {
     const q = query.trim();
@@ -101,91 +76,32 @@ export function TickerSearch({
       return;
     }
 
-    const normalized = normalizeTicker(q);
-    const isSym = normalized.length > 0 && isLikelyFullSymbolForQuote(normalized);
-    /** Voller Stock-Fetch (3 AV-Calls) — etwas länger entprellen als Namenssuche. */
-    const debounceMs = isSym ? 700 : 320;
-
     const ac = new AbortController();
-    const t = window.setTimeout(async () => {
+    const debounceMs = 320;
+    const timer = window.setTimeout(async () => {
       setLoading(true);
       setSearchNotice(null);
       try {
-        if (isSym) {
-          const res = await fetch(
-            `/api/stock/quote?ticker=${encodeURIComponent(normalized)}`,
-            { signal: ac.signal },
-          );
-          const data = (await res.json()) as {
-            ok?: boolean;
-            message?: string;
-            quote?: { symbol?: string };
-          };
-          if (ac.signal.aborted) return;
-          if (!data.ok || !data.quote) {
-            setRemote([]);
-            setSearchNotice(
-              typeof data.message === "string" && data.message.trim()
-                ? data.message.trim()
-                : "Marktdaten werden geladen... bitte kurz warten.",
-            );
-            return;
-          }
-          const sym = (data.quote.symbol || normalized).toUpperCase();
-          let name = sym;
-          let sector = "";
-          let industry = "";
-          await new Promise((r) => setTimeout(r, 450));
-          if (ac.signal.aborted) return;
-          try {
-            const oRes = await fetch(
-              `/api/stock/overview?ticker=${encodeURIComponent(sym)}`,
-              { signal: ac.signal },
-            );
-            const oData = (await oRes.json()) as {
-              ok?: boolean;
-              overview?: {
-                name?: string | null;
-                sector?: string | null;
-                industry?: string | null;
-              } | null;
-            };
-            if (!ac.signal.aborted && oData.ok && oData.overview) {
-              name = oData.overview.name?.trim() || sym;
-              sector = oData.overview.sector?.trim() || "";
-              industry = oData.overview.industry?.trim() || "";
-            }
-          } catch {
-            /* Overview optional — Kurs aus Quote reicht */
-          }
-          if (!ac.signal.aborted) {
-            setRemote([{ symbol: sym, name, region: sector, type: industry }]);
+        const res = await fetch(
+          `/api/search/tickers?q=${encodeURIComponent(q)}`,
+          { signal: ac.signal },
+        );
+        const data = (await res.json()) as {
+          matches?: TickerSearchMatch[];
+          noApiKey?: boolean;
+        };
+        if (!ac.signal.aborted) {
+          setRemote(Array.isArray(data.matches) ? data.matches : []);
+          if (data.noApiKey) {
+            setSearchNotice(t("search.noApiKey"));
+          } else {
             setSearchNotice(null);
-          }
-        } else {
-          const res = await fetch(
-            `/api/search/tickers?q=${encodeURIComponent(q)}`,
-            { signal: ac.signal },
-          );
-          const data = (await res.json()) as {
-            matches?: TickerSearchMatch[];
-            noApiKey?: boolean;
-          };
-          if (!ac.signal.aborted) {
-            setRemote(Array.isArray(data.matches) ? data.matches : []);
-            if (data.noApiKey) {
-              setSearchNotice(
-                "API-Key fehlt: ALPHA_VANTAGE_API_KEY oder NEXT_PUBLIC_ALPHA_VANTAGE_KEY setzen.",
-              );
-            } else {
-              setSearchNotice(null);
-            }
           }
         }
       } catch {
         if (!ac.signal.aborted) {
           setRemote([]);
-          setSearchNotice("Marktdaten werden geladen... bitte kurz warten.");
+          setSearchNotice(t("search.loading"));
         }
       } finally {
         if (!ac.signal.aborted) setLoading(false);
@@ -193,10 +109,10 @@ export function TickerSearch({
     }, debounceMs);
 
     return () => {
-      window.clearTimeout(t);
+      window.clearTimeout(timer);
       ac.abort();
     };
-  }, [query]);
+  }, [query, t]);
 
   const go = useCallback(
     (symbol: string) => {
@@ -239,10 +155,6 @@ export function TickerSearch({
       e.preventDefault();
       const pick = suggestions[activeIndex];
       if (pick) go(pick.symbol);
-      else if (query.trim()) {
-        const s = normalizeTicker(query);
-        if (s && isValidTickerSymbol(s)) go(s);
-      }
     } else if (e.key === "Escape") {
       setOpen(false);
     }
@@ -279,7 +191,7 @@ export function TickerSearch({
             aria-autocomplete="list"
             autoComplete="off"
             spellCheck={false}
-            placeholder="Ticker oder Name — z. B. SAP, ROG.SW, Toyota"
+            placeholder={t("search.placeholder")}
             className="h-12 border-0 bg-transparent pl-11 pr-3 text-base shadow-none focus-visible:ring-0"
             value={query}
             onChange={(ev) => {
@@ -294,16 +206,13 @@ export function TickerSearch({
           type="button"
           size="lg"
           className="h-12 shrink-0 rounded-lg px-5"
+          disabled={loading || suggestions.length === 0}
           onClick={() => {
             const pick = suggestions[activeIndex];
             if (pick) go(pick.symbol);
-            else if (query.trim()) {
-              const s = normalizeTicker(query);
-              if (s && isValidTickerSymbol(s)) go(s);
-            }
           }}
         >
-          Dashboard
+          {t("search.dashboardBtn")}
           <ArrowRight className="size-4" aria-hidden />
         </Button>
       </div>
@@ -322,11 +231,11 @@ export function TickerSearch({
           {loading && suggestions.length === 0 ? (
             <li className="flex items-center gap-2 px-4 py-3 text-sm text-muted-foreground">
               <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
-              Marktdaten werden geladen... bitte kurz warten.
+              {t("search.loadingList")}
             </li>
           ) : null}
           {suggestions.map((s, idx) => (
-            <li key={s.symbol} role="presentation">
+            <li key={`${s.symbol}-${idx}`} role="presentation">
               <button
                 type="button"
                 role="option"
@@ -357,12 +266,7 @@ export function TickerSearch({
             </li>
           ))}
           {!loading && suggestions.length === 0 && query.trim().length > 0 ? (
-            <li className="px-4 py-3 text-sm text-muted-foreground">
-              Marktdaten werden geladen... bitte kurz warten. Ticker prüfen oder später erneut
-              versuchen. Gültige Symbole: Buchstaben, Zahlen, Punkt, Bindestrich — mit{" "}
-              <kbd className="rounded border px-1 font-mono text-[10px]">Enter</kbd> direkt
-              öffnen.
-            </li>
+            <li className="px-4 py-3 text-sm text-muted-foreground">{t("search.emptyHint")}</li>
           ) : null}
         </ul>
       ) : null}

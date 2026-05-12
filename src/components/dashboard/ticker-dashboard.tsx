@@ -27,6 +27,7 @@ import type {
 import type { NewsArticle } from "@/lib/api/finnhub";
 import { CurrentDate } from "@/components/dashboard/current-date";
 import { TickerSearch } from "@/components/search/ticker-search";
+import { useLocale } from "@/contexts/locale-context";
 import { cn } from "@/lib/utils";
 
 function filterNewsByDays(articles: NewsArticle[], days: number): NewsArticle[] {
@@ -57,6 +58,10 @@ function SummaryBlock({ title, body }: { title: string; body: string }) {
 
 export function TickerDashboard({ model }: TickerDashboardProps) {
   const [tab, setTab] = useState<"5d" | "30d">("5d");
+  const { t } = useLocale();
+
+  const waitLine = (tk: string) =>
+    t("dash.waitingTicker").replace(/\{ticker\}/g, tk);
 
   const news5 = useMemo(
     () => filterNewsByDays(model.news, 5),
@@ -73,21 +78,11 @@ export function TickerDashboard({ model }: TickerDashboardProps) {
   const analysisBanner =
     model.marketDataState === "no_api_key" ? (
       <p className="rounded-lg border border-amber-900/60 bg-amber-950/40 px-4 py-3 text-sm text-amber-100">
-        Marktdaten werden geladen... bitte kurz warten. Hinterlegen Sie{" "}
-        <code className="rounded bg-slate-900 px-1.5 py-0.5 font-mono text-xs">
-          ALPHA_VANTAGE_API_KEY
-        </code>{" "}
-        (Vercel) oder{" "}
-        <code className="rounded bg-slate-900 px-1.5 py-0.5 font-mono text-xs">
-          NEXT_PUBLIC_ALPHA_VANTAGE_KEY
-        </code>{" "}
-        in <code className="font-mono text-xs">.env.local</code>.
+        {t("dash.bannerNoKey")}
       </p>
     ) : model.marketDataState === "unavailable" ? (
       <p className="rounded-lg border border-slate-700 bg-slate-900/80 px-4 py-3 text-sm text-slate-300">
-        Marktdaten werden geladen... bitte kurz warten. (Ticker{" "}
-        <span className="font-mono font-semibold text-white">{model.ticker}</span> — Limit,
-        Netzwerk oder Symbol prüfen.)
+        {t("dash.bannerUnavailable").replace(/\{ticker\}/g, model.ticker)}
       </p>
     ) : null;
 
@@ -96,7 +91,7 @@ export function TickerDashboard({ model }: TickerDashboardProps) {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-slate-500">
           <Link href="/" className="hover:text-slate-300">
-            ← Zurück
+            {t("dash.back")}
           </Link>
         </p>
         <div className="flex w-full flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end sm:gap-6">
@@ -115,24 +110,23 @@ export function TickerDashboard({ model }: TickerDashboardProps) {
         <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
           <div className="min-w-0 shrink-0">
             <h1 className="text-3xl font-bold tracking-tight">
-              {model.ticker} · Marktanalyse
+              {model.ticker} · {t("dash.analysis")}
             </h1>
             {live && model.companyName ? (
               <p className="mt-1 text-sm font-medium text-slate-300">{model.companyName}</p>
             ) : null}
             {live ? (
               <p className="mt-0.5 font-mono text-xs text-slate-600">
-                Datenquelle: Alpha Vantage · Symbol {model.displaySymbol}
+                {t("dash.dataSource")} {model.displaySymbol}
               </p>
             ) : (
               <p className="mt-2 text-sm text-slate-400">
-                Marktdaten werden geladen... bitte kurz warten. (
-                <span className="font-mono text-slate-200">{model.ticker}</span>)
+                {waitLine(model.ticker)}
               </p>
             )}
           </div>
           <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-1 sm:max-w-xs">
-            <span className="sr-only">Kursverlauf (14 Handelstage)</span>
+            <span className="sr-only">{t("dash.sparkSr")}</span>
             <div className="flex h-14 min-h-0 w-full items-center">
               <QuoteSparkline data={model.sparkline} positive={positive} live={live} />
             </div>
@@ -160,13 +154,12 @@ export function TickerDashboard({ model }: TickerDashboardProps) {
                   <MoveDownLeft size={14} aria-hidden />
                 )}
                 {positive ? "+" : ""}
-                {model.quote.changePercent.toFixed(1)}% (vs. Vortag)
+                {model.quote.changePercent.toFixed(1)}% {t("dash.vsPrev")}
               </p>
             </>
           ) : (
             <p className="max-w-xs text-right text-sm text-slate-500">
-              Marktdaten werden geladen... bitte kurz warten. (
-              <span className="font-mono text-slate-300">{model.ticker}</span>)
+              {waitLine(model.ticker)}
             </p>
           )}
         </div>
@@ -177,27 +170,22 @@ export function TickerDashboard({ model }: TickerDashboardProps) {
           <Card className="border-slate-800 bg-slate-900">
             <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2">
               <BarChart3 className="size-4 text-sky-400" aria-hidden />
-              <CardTitle className="text-sm text-slate-400">
-                Kurs-Daten
-              </CardTitle>
+              <CardTitle className="text-sm text-slate-400">{t("dash.priceData")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               {!live ? (
-                <p className="text-slate-500">
-                  Marktdaten werden geladen... bitte kurz warten. (
-                  <span className="font-mono text-slate-300">{model.ticker}</span>)
-                </p>
+                <p className="text-slate-500">{waitLine(model.ticker)}</p>
               ) : (
                 <>
                   <div className="flex justify-between gap-4">
-                    <span className="text-slate-500">Letzter Kurs</span>
+                    <span className="text-slate-500">{t("dash.last")}</span>
                     <span className="font-mono text-white">
                       {model.quote.currency === "USD" ? "$" : `${model.quote.currency} `}
                       {model.quote.last.toFixed(2)}
                     </span>
                   </div>
                   <div className="flex justify-between gap-4">
-                    <span className="text-slate-500">Schluss Vortag</span>
+                    <span className="text-slate-500">{t("dash.prevClose")}</span>
                     <span className="font-mono text-slate-300">
                       {model.quote.currency === "USD" ? "$" : `${model.quote.currency} `}
                       {model.priceContext.previousClose.toFixed(2)}
@@ -206,7 +194,7 @@ export function TickerDashboard({ model }: TickerDashboardProps) {
                   {model.priceContext.sessionHigh != null &&
                   model.priceContext.sessionLow != null ? (
                     <div className="flex justify-between gap-4">
-                      <span className="text-slate-500">Tagesrange</span>
+                      <span className="text-slate-500">{t("dash.range")}</span>
                       <span className="text-right font-mono text-xs text-slate-300">
                         {model.quote.currency === "USD" ? "$" : `${model.quote.currency} `}
                         {model.priceContext.sessionLow.toFixed(2)} –{" "}
@@ -216,17 +204,17 @@ export function TickerDashboard({ model }: TickerDashboardProps) {
                   ) : null}
                   {model.priceContext.volumeMln != null ? (
                     <div className="flex justify-between gap-4">
-                      <span className="text-slate-500">Volumen</span>
+                      <span className="text-slate-500">{t("dash.volume")}</span>
                       <span className="font-mono text-slate-300">
-                        {model.priceContext.volumeMln.toFixed(1)} Mio.
+                        {model.priceContext.volumeMln.toFixed(1)} {t("dash.volMio")}
                       </span>
                     </div>
                   ) : null}
                   {model.priceContext.marketCapBln != null ? (
                     <div className="flex justify-between gap-4">
-                      <span className="text-slate-500">Marktkap.</span>
+                      <span className="text-slate-500">{t("dash.mcap")}</span>
                       <span className="font-mono text-slate-300">
-                        ${model.priceContext.marketCapBln.toFixed(1)} Mrd.
+                        ${model.priceContext.marketCapBln.toFixed(1)} {t("dash.mcapBln")}
                       </span>
                     </div>
                   ) : null}
@@ -238,7 +226,7 @@ export function TickerDashboard({ model }: TickerDashboardProps) {
           {live && (model.companyDescription || model.avSectorRaw) ? (
             <Card className="border-slate-800 bg-slate-900">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-slate-400">Firmenprofil (Overview)</CardTitle>
+                <CardTitle className="text-sm text-slate-400">{t("dash.profile")}</CardTitle>
                 {model.avSectorRaw ? (
                   <CardDescription className="font-mono text-xs text-slate-500">
                     {model.avSectorRaw}
@@ -250,7 +238,7 @@ export function TickerDashboard({ model }: TickerDashboardProps) {
                 {model.companyDescription ? (
                   <p className="whitespace-pre-wrap">{model.companyDescription}</p>
                 ) : (
-                  <p className="text-slate-500">Keine Beschreibung in der Overview-Antwort.</p>
+                  <p className="text-slate-500">{t("dash.noDesc")}</p>
                 )}
               </CardContent>
             </Card>
@@ -258,37 +246,30 @@ export function TickerDashboard({ model }: TickerDashboardProps) {
 
           <Card className="border-slate-800 bg-slate-900">
             <CardHeader>
-              <CardTitle className="text-sm text-slate-400">
-                Kursziele & Kennzahlen
-              </CardTitle>
+              <CardTitle className="text-sm text-slate-400">{t("dash.targets")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {!live ? (
-                <p className="text-sm text-slate-500">
-                  Marktdaten werden geladen... bitte kurz warten. (
-                  <span className="font-mono text-slate-300">{model.ticker}</span>)
-                </p>
+                <p className="text-sm text-slate-500">{waitLine(model.ticker)}</p>
               ) : (
                 <>
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                     {model.analystConsensusUsd != null ? (
                       <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
-                        <p className="text-xs text-slate-500">Analystenziel (Overview)</p>
+                        <p className="text-xs text-slate-500">{t("dash.analystOverview")}</p>
                         <p className="mt-1 font-mono text-lg font-semibold text-white">
                           ${model.analystConsensusUsd.toFixed(2)}
                         </p>
                       </div>
                     ) : (
                       <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-3 sm:col-span-2">
-                        <p className="text-xs text-slate-500">Analystenziel</p>
-                        <p className="mt-1 text-sm text-slate-400">
-                          Kein Ziel in Company Overview hinterlegt.
-                        </p>
+                        <p className="text-xs text-slate-500">{t("dash.analyst")}</p>
+                        <p className="mt-1 text-sm text-slate-400">{t("dash.noAnalystTarget")}</p>
                       </div>
                     )}
                     {model.analystConsensusHighUsd != null ? (
                       <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
-                        <p className="text-xs text-slate-500">Hoch (Analysten)</p>
+                        <p className="text-xs text-slate-500">{t("dash.analystHigh")}</p>
                         <p className="mt-1 font-mono text-lg font-semibold text-white">
                           ${model.analystConsensusHighUsd.toFixed(2)}
                         </p>
@@ -296,7 +277,7 @@ export function TickerDashboard({ model }: TickerDashboardProps) {
                     ) : null}
                     {model.fairValueUsd != null ? (
                       <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
-                        <p className="text-xs text-slate-500">Fair Value (Schätz.)</p>
+                        <p className="text-xs text-slate-500">{t("dash.fairValue")}</p>
                         <p className="mt-1 font-mono text-lg font-semibold text-emerald-300">
                           ${model.fairValueUsd.toFixed(2)}
                         </p>
@@ -325,9 +306,7 @@ export function TickerDashboard({ model }: TickerDashboardProps) {
 
           <Card className="border-slate-800 bg-slate-900">
             <CardHeader>
-              <CardTitle className="text-sm text-slate-400">
-                Institutionelle Trends
-              </CardTitle>
+              <CardTitle className="text-sm text-slate-400">{t("dash.institutional")}</CardTitle>
             </CardHeader>
             <CardContent
               className={cn(
@@ -349,20 +328,17 @@ export function TickerDashboard({ model }: TickerDashboardProps) {
           >
             <CardHeader className="space-y-0 pb-2">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <CardTitle className="text-lg">News & Signale</CardTitle>
+                <CardTitle className="text-lg">{t("dash.news")}</CardTitle>
                 <TabsList className="bg-slate-800">
-                  <TabsTrigger value="5d">5 Tage</TabsTrigger>
-                  <TabsTrigger value="30d">30 Tage</TabsTrigger>
+                  <TabsTrigger value="5d">{t("dash.tab5")}</TabsTrigger>
+                  <TabsTrigger value="30d">{t("dash.tab30")}</TabsTrigger>
                 </TabsList>
               </div>
             </CardHeader>
             <CardContent className="pt-0">
               <TabsContent value="5d" className="mt-0 space-y-4">
                 {news5.length === 0 ? (
-                  <p className="text-sm text-slate-500">
-                    Kein News-Feed angebunden (optional: Finnhub o. Ä.). Marktanalyse läuft über Alpha
-                    Vantage.
-                  </p>
+                  <p className="text-sm text-slate-500">{t("dash.noNews")}</p>
                 ) : (
                   news5.map((n) => (
                     <NewsRow key={n.id} article={n} />
@@ -371,10 +347,7 @@ export function TickerDashboard({ model }: TickerDashboardProps) {
               </TabsContent>
               <TabsContent value="30d" className="mt-0 space-y-4">
                 {news30.length === 0 ? (
-                  <p className="text-sm text-slate-500">
-                    Kein News-Feed angebunden (optional: Finnhub o. Ä.). Marktanalyse läuft über Alpha
-                    Vantage.
-                  </p>
+                  <p className="text-sm text-slate-500">{t("dash.noNews")}</p>
                 ) : (
                   news30.map((n) => (
                     <NewsRow key={n.id} article={n} />
@@ -426,7 +399,7 @@ export function TickerDashboard({ model }: TickerDashboardProps) {
         <CardHeader>
           <CardTitle className="flex flex-wrap items-center gap-2 text-base text-white">
             <Sparkles className="size-4 text-teal-400" aria-hidden />
-            Research-Zusammenfassung
+            {t("dash.research")}
             <span className="rounded-md border border-slate-700 bg-slate-800/80 px-2 py-0.5 text-xs font-normal text-slate-300">
               {model.aiSummary.sectorLabelDe}
             </span>
@@ -436,21 +409,21 @@ export function TickerDashboard({ model }: TickerDashboardProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 text-sm leading-relaxed text-slate-300">
-          <SummaryBlock title="Investment-These" body={model.aiSummary.investmentThesis} />
+          <SummaryBlock title={t("dash.thesis")} body={model.aiSummary.investmentThesis} />
           <SummaryBlock
-            title="Operative Expansion & Kapazität"
+            title={t("dash.ops")}
             body={model.aiSummary.operationsCapacityNarrative}
           />
           <SummaryBlock
-            title="Technologie & Innovation"
+            title={t("dash.tech")}
             body={model.aiSummary.technologyInnovationNarrative}
           />
           <SummaryBlock
-            title="Kommerzialisierung & Partnerschaften"
+            title={t("dash.commercial")}
             body={model.aiSummary.contractsCommercialNarrative}
           />
           <SummaryBlock
-            title="Risiken, Katalysatoren & Fazit"
+            title={t("dash.risks")}
             body={model.aiSummary.risksCatalystsAndConclusion}
           />
         </CardContent>
@@ -460,12 +433,14 @@ export function TickerDashboard({ model }: TickerDashboardProps) {
 }
 
 function NewsRow({ article }: { article: NewsArticle }) {
+  const { locale } = useLocale();
+  const locTag = locale === "en" ? "en-US" : "de-DE";
   return (
     <div className="border-l-2 border-blue-500 bg-slate-800/50 p-3 text-sm">
       <p className="text-slate-100">{article.headline}</p>
       <p className="mt-1 text-xs text-slate-500">
         {article.source} ·{" "}
-        {new Date(article.datetime).toLocaleDateString("de-DE", {
+        {new Date(article.datetime).toLocaleDateString(locTag, {
           day: "2-digit",
           month: "short",
           year: "numeric",
@@ -484,6 +459,7 @@ function QuoteSparkline({
   positive: boolean;
   live: boolean;
 }) {
+  const { t } = useLocale();
   const rawId = useId().replace(/:/g, "");
   const gradId = `spark-fill-${rawId}`;
   const stroke = positive ? "#4ade80" : "#f87171";
@@ -491,7 +467,7 @@ function QuoteSparkline({
   if (!live || data.length === 0) {
     return (
       <div className="flex h-full w-full items-center justify-center rounded-md border border-dashed border-slate-700 text-xs text-slate-600">
-        {!live ? "Live-Serie nach Datenabruf" : "Keine Serienpunkte"}
+        {!live ? t("dash.sparkWait") : t("dash.sparkEmpty")}
       </div>
     );
   }

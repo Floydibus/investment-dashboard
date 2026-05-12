@@ -4,6 +4,9 @@ import {
   type CompanyOverview,
   type QuoteSnapshot,
 } from "@/lib/api/alpha-vantage";
+import type { AppLocale } from "@/lib/i18n/app-locale";
+import { shellInstitutionalHint } from "@/lib/i18n/shell-copy";
+import { uiT } from "@/lib/i18n/ui-messages";
 import {
   buildSmartAnalysis,
   buildStrategicFromTemplates,
@@ -97,6 +100,7 @@ function buildShellModel(
   displayTicker: string,
   avSym: string,
   state: "no_api_key" | "unavailable",
+  locale: AppLocale,
 ): DashboardViewModel {
   const sector = resolveMappedSector(displayTicker);
   const { aiSummary, strategicTitles } = buildSmartAnalysis(
@@ -107,10 +111,7 @@ function buildShellModel(
   const strategic = buildStrategicFromTemplates(sector, displayTicker);
   const isoToday = new Date().toISOString().slice(0, 10);
 
-  const hint =
-    state === "no_api_key"
-      ? "Marktdaten werden geladen... bitte kurz warten. — Legen Sie ALPHA_VANTAGE_API_KEY (Vercel) oder NEXT_PUBLIC_ALPHA_VANTAGE_KEY (.env.local) an."
-      : "Marktdaten werden geladen... bitte kurz warten.";
+  const hint = shellInstitutionalHint(state, locale);
 
   return {
     ticker: displayTicker,
@@ -154,6 +155,7 @@ function mergeFromLive(
   snap: QuoteSnapshot,
   daily: DashboardSparkPoint[],
   overview: CompanyOverview | null,
+  locale: AppLocale,
 ): DashboardViewModel {
   const sector = overview?.sector
     ? mapAlphaVantageSectorToKey(overview.sector)
@@ -184,17 +186,17 @@ function mergeFromLive(
       { date: asOf, close: snap.lastClose },
     ];
     sparklineHint =
-      "Kurzübersicht Vortag → aktueller Stand (14-Tage-Serie derzeit nicht verfügbar oder limitiert).";
+      uiT(locale, "dash.sparklineHint");
   } else if (spark.length < 2) {
     spark = [];
   }
 
   const keyStats: DashboardKeyStat[] = [];
   if (overview?.industry) {
-    keyStats.push({ label: "Branche (Overview)", value: overview.industry });
+    keyStats.push({ label: uiT(locale, "dash.statIndustry"), value: overview.industry });
   }
   if (overview?.sector) {
-    keyStats.push({ label: "Sektor (Overview)", value: overview.sector });
+    keyStats.push({ label: uiT(locale, "dash.statSector"), value: overview.sector });
   }
 
   return {
@@ -248,8 +250,9 @@ export function getDashboardShellFor(
   displayTicker: string,
   avSym: string,
   state: "no_api_key" | "unavailable",
+  locale: AppLocale = "de",
 ): DashboardViewModel {
-  return buildShellModel(displayTicker, avSym, state);
+  return buildShellModel(displayTicker, avSym, state, locale);
 }
 
 export function buildDashboardViewModelFromBundle(
@@ -258,8 +261,9 @@ export function buildDashboardViewModelFromBundle(
   quote: QuoteSnapshot,
   dailyCloses: DashboardSparkPoint[],
   overview: CompanyOverview | null,
+  locale: AppLocale = "de",
 ): DashboardViewModel {
-  return mergeFromLive(displayTicker, avSym, quote, dailyCloses, overview);
+  return mergeFromLive(displayTicker, avSym, quote, dailyCloses, overview, locale);
 }
 
 /**
@@ -268,13 +272,15 @@ export function buildDashboardViewModelFromBundle(
  */
 export async function getDashboardViewModel(
   tickerRaw: string,
+  locale: AppLocale,
 ): Promise<DashboardViewModel> {
   const trimmed = tickerRaw.trim();
   const displayTicker = (trimmed.length > 0 ? trimmed : "AAPL").toUpperCase();
   const avSym = resolveAlphaVantageSymbol(trimmed.length > 0 ? trimmed : "AAPL");
+  const loc = locale;
 
   if (!getAlphaVantageApiKey()) {
-    return buildShellModel(displayTicker, avSym, "no_api_key");
+    return buildShellModel(displayTicker, avSym, "no_api_key", loc);
   }
 
   try {
@@ -284,9 +290,9 @@ export async function getDashboardViewModel(
       date: p.date,
       close: p.close,
     }));
-    return mergeFromLive(displayTicker, avSym, snap, spark, overview);
+    return mergeFromLive(displayTicker, avSym, snap, spark, overview, loc);
   } catch (e) {
     console.error("[getDashboardViewModel] Alpha Vantage:", avSym, e);
-    return buildShellModel(displayTicker, avSym, "unavailable");
+    return buildShellModel(displayTicker, avSym, "unavailable", loc);
   }
 }

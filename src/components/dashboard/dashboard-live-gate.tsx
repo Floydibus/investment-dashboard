@@ -9,6 +9,7 @@ import {
   buildDashboardViewModelFromBundle,
   getDashboardShellFor,
 } from "@/lib/data/dashboard-view-model";
+import { useLocale } from "@/contexts/locale-context";
 
 /** Pause zwischen Alpha-Vantage-Calls (Free Tier). */
 const BETWEEN_STEPS_MS = 850;
@@ -29,6 +30,7 @@ type Props = {
  */
 export function DashboardLiveGate({ displayTicker, avSym }: Props) {
   const [model, setModel] = useState<DashboardViewModel | null>(null);
+  const { locale, t } = useLocale();
 
   useEffect(() => {
     let cancelled = false;
@@ -49,13 +51,13 @@ export function DashboardLiveGate({ displayTicker, avSym }: Props) {
         if (cancelled) return;
         if (!qJson.ok || !qJson.quote) {
           const state = qJson.error === "NO_KEY" ? "no_api_key" : "unavailable";
-          setModel(getDashboardShellFor(displayTicker, avSym, state));
+          setModel(getDashboardShellFor(displayTicker, avSym, state, locale));
           return;
         }
         const quote = qJson.quote;
 
         setModel(
-          buildDashboardViewModelFromBundle(displayTicker, avSym, quote, [], null),
+          buildDashboardViewModelFromBundle(displayTicker, avSym, quote, [], null, locale),
         );
 
         await sleep(BETWEEN_STEPS_MS);
@@ -71,7 +73,7 @@ export function DashboardLiveGate({ displayTicker, avSym }: Props) {
         const daily = Array.isArray(dJson.dailyCloses) ? dJson.dailyCloses : [];
         if (!cancelled) {
           setModel(
-            buildDashboardViewModelFromBundle(displayTicker, avSym, quote, daily, null),
+            buildDashboardViewModelFromBundle(displayTicker, avSym, quote, daily, null, locale),
           );
         }
 
@@ -94,13 +96,14 @@ export function DashboardLiveGate({ displayTicker, avSym }: Props) {
               quote,
               daily,
               overview,
+              locale,
             ),
           );
         }
       } catch (e) {
         if (cancelled) return;
         if (e instanceof DOMException && e.name === "AbortError") return;
-        setModel(getDashboardShellFor(displayTicker, avSym, "unavailable"));
+        setModel(getDashboardShellFor(displayTicker, avSym, "unavailable", locale));
       }
     }
 
@@ -109,19 +112,17 @@ export function DashboardLiveGate({ displayTicker, avSym }: Props) {
       cancelled = true;
       ac.abort();
     };
-  }, [displayTicker, avSym]);
+  }, [displayTicker, avSym, locale]);
 
   if (!model) {
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-slate-950 p-8 text-slate-300">
         <Loader2 className="size-10 animate-spin text-sky-400" aria-hidden />
         <p className="max-w-md text-center text-sm">
-          Marktdaten werden geladen…{" "}
+          {t("gate.loading")}{" "}
           <span className="font-mono text-slate-400">{displayTicker}</span>
         </p>
-        <p className="max-w-sm text-center text-xs text-slate-500">
-          Kurz warten — bei vielen Wechseln kann Alpha Vantage (Free Tier) 1 Minute drosseln.
-        </p>
+        <p className="max-w-sm text-center text-xs text-slate-500">{t("gate.sub")}</p>
       </div>
     );
   }

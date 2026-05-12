@@ -5,6 +5,7 @@ import {
   getDashboardTickerParams,
   getDashboardViewModel,
 } from "@/lib/data/dashboard-view-model";
+import { readServerLocale } from "@/lib/i18n/read-server-locale";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,8 @@ export default async function DashboardPage({ params }: PageProps) {
   const decoded = decodeURIComponent(ticker);
 
   if (!getAlphaVantageApiKey()) {
-    const model = await getDashboardViewModel(decoded);
+    const locale = await readServerLocale();
+    const model = await getDashboardViewModel(decoded, locale);
     return <TickerDashboard model={model} />;
   }
 
