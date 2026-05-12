@@ -79,7 +79,7 @@ export function TickerSearch({
         {
           symbol: q,
           name: "Direkt zum Dashboard",
-          exchange: "Live-Daten über /api/stock",
+          exchange: "Live-Kurs prüfen",
         },
       ];
     }
@@ -108,38 +108,54 @@ export function TickerSearch({
       try {
         if (isSym) {
           const res = await fetch(
-            `/api/stock?ticker=${encodeURIComponent(normalized)}`,
+            `/api/stock/quote?ticker=${encodeURIComponent(normalized)}`,
             { signal: ac.signal },
           );
           const data = (await res.json()) as {
             ok?: boolean;
             message?: string;
             quote?: { symbol?: string };
-            overview?: {
-              name?: string | null;
-              sector?: string | null;
-              industry?: string | null;
-            };
           };
           if (ac.signal.aborted) return;
-          if (data.ok && data.quote) {
-            const sym = (data.quote.symbol || normalized).toUpperCase();
-            setRemote([
-              {
-                symbol: sym,
-                name: data.overview?.name?.trim() || sym,
-                region: data.overview?.sector?.trim() || "",
-                type: data.overview?.industry?.trim() || "",
-              },
-            ]);
-            setSearchNotice(null);
-          } else {
+          if (!data.ok || !data.quote) {
             setRemote([]);
             setSearchNotice(
               typeof data.message === "string" && data.message.trim()
                 ? data.message.trim()
                 : "Marktdaten werden geladen... bitte kurz warten.",
             );
+            return;
+          }
+          const sym = (data.quote.symbol || normalized).toUpperCase();
+          let name = sym;
+          let sector = "";
+          let industry = "";
+          await new Promise((r) => setTimeout(r, 450));
+          if (ac.signal.aborted) return;
+          try {
+            const oRes = await fetch(
+              `/api/stock/overview?ticker=${encodeURIComponent(sym)}`,
+              { signal: ac.signal },
+            );
+            const oData = (await oRes.json()) as {
+              ok?: boolean;
+              overview?: {
+                name?: string | null;
+                sector?: string | null;
+                industry?: string | null;
+              } | null;
+            };
+            if (!ac.signal.aborted && oData.ok && oData.overview) {
+              name = oData.overview.name?.trim() || sym;
+              sector = oData.overview.sector?.trim() || "";
+              industry = oData.overview.industry?.trim() || "";
+            }
+          } catch {
+            /* Overview optional — Kurs aus Quote reicht */
+          }
+          if (!ac.signal.aborted) {
+            setRemote([{ symbol: sym, name, region: sector, type: industry }]);
+            setSearchNotice(null);
           }
         } else {
           const res = await fetch(

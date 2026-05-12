@@ -234,6 +234,35 @@ function mergeFromLive(
   };
 }
 
+/** Display-Ticker + Alpha-Vantage-Symbol (z. B. Root-Symbol) — gleiche Logik wie SSR. */
+export function getDashboardTickerParams(tickerRaw: string): {
+  displayTicker: string;
+  avSym: string;
+} {
+  const trimmed = tickerRaw.trim();
+  const displayTicker = (trimmed.length > 0 ? trimmed : "AAPL").toUpperCase();
+  const avSym = resolveAlphaVantageSymbol(trimmed.length > 0 ? trimmed : "AAPL");
+  return { displayTicker, avSym };
+}
+
+export function getDashboardShellFor(
+  displayTicker: string,
+  avSym: string,
+  state: "no_api_key" | "unavailable",
+): DashboardViewModel {
+  return buildShellModel(displayTicker, avSym, state);
+}
+
+export function buildDashboardViewModelFromBundle(
+  displayTicker: string,
+  avSym: string,
+  quote: QuoteSnapshot,
+  dailyCloses: DashboardSparkPoint[],
+  overview: CompanyOverview | null,
+): DashboardViewModel {
+  return mergeFromLive(displayTicker, avSym, quote, dailyCloses, overview);
+}
+
 /**
  * Globale Marktanalyse: Live-Daten per Alpha Vantage für jeden Ticker.
  * API-Key nur serverseitig; bei Fehler oder fehlendem Key Platzhalter-UI.
