@@ -1,17 +1,20 @@
 /**
  * Alpha Vantage — Live-Kurse (GLOBAL_QUOTE), Tages-Serie, OVERVIEW, SYMBOL_SEARCH.
  *
- * API-Key: ausschließlich `process.env.NEXT_PUBLIC_ALPHA_VANTAGE_KEY` (in `.env.local`).
+ * API-Key (Reihenfolge): `ALPHA_VANTAGE_API_KEY` (serverseitig, empfohlen für Vercel) oder
+ * `NEXT_PUBLIC_ALPHA_VANTAGE_KEY` (weiterhin unterstützt).
  *
  * @see https://www.alphavantage.co/documentation/
  */
 
 const ALPHA_BASE = "https://www.alphavantage.co/query";
 
-/** Einziger Key-Pfad für Alpha Vantage (Next.js: NEXT_PUBLIC_*). */
+/** Alpha-Vantage-Key: zuerst server-only, sonst NEXT_PUBLIC (Abwärtskompatibilität). */
 export function getAlphaVantageApiKey(): string | null {
-  const k = process.env.NEXT_PUBLIC_ALPHA_VANTAGE_KEY?.trim();
-  return k || null;
+  const server = process.env.ALPHA_VANTAGE_API_KEY?.trim();
+  if (server) return server;
+  const pub = process.env.NEXT_PUBLIC_ALPHA_VANTAGE_KEY?.trim();
+  return pub || null;
 }
 
 export type QuoteSnapshot = {
@@ -48,7 +51,7 @@ function getApiKey(): string {
   const key = getAlphaVantageApiKey();
   if (!key) {
     throw new Error(
-      "Alpha Vantage Key fehlt. Setzen Sie NEXT_PUBLIC_ALPHA_VANTAGE_KEY in .env.local.",
+      "Alpha Vantage Key fehlt. Setzen Sie ALPHA_VANTAGE_API_KEY oder NEXT_PUBLIC_ALPHA_VANTAGE_KEY.",
     );
   }
   return key;

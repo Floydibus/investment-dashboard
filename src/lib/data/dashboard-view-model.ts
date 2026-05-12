@@ -1,5 +1,6 @@
 import type { NewsArticle } from "@/lib/api/finnhub";
 import {
+  getAlphaVantageApiKey,
   type CompanyOverview,
   type QuoteSnapshot,
 } from "@/lib/api/alpha-vantage";
@@ -107,7 +108,7 @@ function buildShellModel(
 
   const hint =
     state === "no_api_key"
-      ? "Marktdaten werden geladen... bitte kurz warten. — Legen Sie NEXT_PUBLIC_ALPHA_VANTAGE_KEY in .env.local an."
+      ? "Marktdaten werden geladen... bitte kurz warten. — Legen Sie ALPHA_VANTAGE_API_KEY (Vercel) oder NEXT_PUBLIC_ALPHA_VANTAGE_KEY (.env.local) an."
       : "Marktdaten werden geladen... bitte kurz warten.";
 
   return {
@@ -224,8 +225,7 @@ export async function getDashboardViewModel(
   const displayTicker = (trimmed.length > 0 ? trimmed : "AAPL").toUpperCase();
   const avSym = resolveAlphaVantageSymbol(trimmed.length > 0 ? trimmed : "AAPL");
 
-  const key = process.env.NEXT_PUBLIC_ALPHA_VANTAGE_KEY?.trim();
-  if (!key) {
+  if (!getAlphaVantageApiKey()) {
     return buildShellModel(displayTicker, avSym, "no_api_key");
   }
 

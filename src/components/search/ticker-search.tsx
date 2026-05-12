@@ -98,6 +98,8 @@ export function TickerSearch({
 
     const normalized = normalizeTicker(q);
     const isSym = normalized.length > 0 && isValidTickerSymbol(normalized);
+    /** Voller Stock-Fetch (3 AV-Calls) — etwas länger entprellen als Namenssuche. */
+    const debounceMs = isSym ? 700 : 320;
 
     const ac = new AbortController();
     const t = window.setTimeout(async () => {
@@ -152,7 +154,7 @@ export function TickerSearch({
             setRemote(Array.isArray(data.matches) ? data.matches : []);
             if (data.noApiKey) {
               setSearchNotice(
-                "NEXT_PUBLIC_ALPHA_VANTAGE_KEY in .env.local setzen, um die Suche zu aktivieren.",
+                "API-Key fehlt: ALPHA_VANTAGE_API_KEY oder NEXT_PUBLIC_ALPHA_VANTAGE_KEY setzen.",
               );
             } else {
               setSearchNotice(null);
@@ -167,7 +169,7 @@ export function TickerSearch({
       } finally {
         if (!ac.signal.aborted) setLoading(false);
       }
-    }, 320);
+    }, debounceMs);
 
     return () => {
       window.clearTimeout(t);

@@ -75,6 +75,10 @@ export function TickerDashboard({ model }: TickerDashboardProps) {
       <p className="rounded-lg border border-amber-900/60 bg-amber-950/40 px-4 py-3 text-sm text-amber-100">
         Marktdaten werden geladen... bitte kurz warten. Hinterlegen Sie{" "}
         <code className="rounded bg-slate-900 px-1.5 py-0.5 font-mono text-xs">
+          ALPHA_VANTAGE_API_KEY
+        </code>{" "}
+        (Vercel) oder{" "}
+        <code className="rounded bg-slate-900 px-1.5 py-0.5 font-mono text-xs">
           NEXT_PUBLIC_ALPHA_VANTAGE_KEY
         </code>{" "}
         in <code className="font-mono text-xs">.env.local</code>.
